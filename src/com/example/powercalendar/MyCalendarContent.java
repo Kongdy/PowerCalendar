@@ -11,6 +11,7 @@ import com.example.powercalendar.tools.Utils;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
@@ -35,8 +36,9 @@ public class MyCalendarContent extends ScrollView {
 	private MyCalendarLayout mCalendarM1; // 每页，复用控件1
 	private MyCalendarLayout mCalendarM2; // 每页，复用控件2
 	private MyCalendarLayout mCalendarM3; // 每页，复用控件3
+	private MyCalendarLayout mCalendarMCursor; // 每页，复用控件4
 	
-	private MyCalendarLayout mCalendarMCursor; // 每页，复用控件3
+	private List<MyCalendarLayout> mCalendars; // 控件组
 	
 	private final int mCalendarM1_ID = 1;
 	private final int mCalendarM2_ID = 2;
@@ -72,23 +74,22 @@ public class MyCalendarContent extends ScrollView {
 	 * 刷新/注入数据,生成万年历
 	 */
 	public void notifyDataSetChanged() {
+		mCalendars = new ArrayList<MyCalendarLayout>();
 		mainContent = new LinearLayout(context);
 		mainContent.setOrientation(LinearLayout.VERTICAL);
 		setVerticalScrollBarEnabled(false);// 不显示滚动条(垂直方向)
 		setBackgroundColor(Color.WHITE);
-		
-		create3Month();
+		createRecycleMonth();
 		
 	}
 	
 	/**
 	 * 创建三个月份，上中下三层，每次在滑动的过程中复用这三个布局
 	 */
-	private void create3Month() {
+	private void createRecycleMonth() {
 		mCalendarM1 = new MyCalendarLayout(context);
 		mCalendarM2 = new MyCalendarLayout(context);
 		mCalendarM3 = new MyCalendarLayout(context);
-		
 		mCalendarMCursor = new MyCalendarLayout(context);
 		
 		mCalendarM1.setId(mCalendarM1_ID);
@@ -96,14 +97,18 @@ public class MyCalendarContent extends ScrollView {
 		mCalendarM3.setId(mCalendarM3_ID);
 		mCalendarMCursor.setId(mCalendarMCursor_ID);
 		
-		List<Map<String, String>> list1 = createMonth(mCalendarM1,System.currentTimeMillis(),-1);
-		List<Map<String, String>> list2 = createMonth(mCalendarM2,System.currentTimeMillis(),0);
-		List<Map<String, String>> list3 = createMonth(mCalendarM3,System.currentTimeMillis(),1);
+		mCalendars.add(mCalendarM1);
+		mCalendars.add(mCalendarM2);
+		mCalendars.add(mCalendarM3);
+		mCalendars.add(mCalendarMCursor);
 		
 		RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(MATHCH_PARENT, WARP_CONTENT);
-		mainContent.addView(mCalendarM1,params);
-		mainContent.addView(mCalendarM2,params);
-		mainContent.addView(mCalendarM3,params);
+		int i = 0;
+		while(i < mCalendars.size()) {
+			createMonth(mCalendars.get(i),System.currentTimeMillis(),i-1);
+			mainContent.addView(mCalendars.get(i),params);
+			i++;
+		}
 		addView(mainContent);
 	}
 	
@@ -174,7 +179,7 @@ public class MyCalendarContent extends ScrollView {
 			c.add(Calendar.MONTH, changeMonth);
 		}
 		int maxDay = c.getActualMaximum(Calendar.DAY_OF_MONTH);
-		int firstWeekDay = c.get(Calendar.DAY_OF_WEEK_IN_MONTH)-1;
+		int firstWeekDay = getFirstWeekDayOfMonth(c.getTimeInMillis());
 		for (int i = 0; i < maxDay; i++) {
 			Map<String, String> map = new HashMap<String, String>();
 			int day = i+1;
@@ -192,6 +197,13 @@ public class MyCalendarContent extends ScrollView {
 		return list;
 	}
 	
+	private int getFirstWeekDayOfMonth(long TimeMills) {
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(TimeMills);
+		c.set(Calendar.DATE, 1);
+		return c.get(Calendar.DAY_OF_WEEK);
+	}
+	
 	
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -204,6 +216,7 @@ public class MyCalendarContent extends ScrollView {
 	@Override
 	protected void onScrollChanged(int l, int t, int oldl, int oldt) {
 		super.onScrollChanged(l, t, oldl, oldt);
+		
 		
 	}
 
