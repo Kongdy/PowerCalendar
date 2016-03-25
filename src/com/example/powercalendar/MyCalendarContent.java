@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.example.powercalendar.tools.Utils;
 
@@ -38,7 +39,7 @@ public class MyCalendarContent extends ScrollView {
 	private MyCalendarLayout mCalendarM3; // 每页，复用控件3
 	private MyCalendarLayout mCalendarMCursor; // 每页，复用控件4
 	
-	private List<MyCalendarLayout> mCalendars; // 控件组
+	private CopyOnWriteArrayList<MyCalendarLayout> mCalendars; // 控件组
 	
 	private final int mCalendarM1_ID = 1;
 	private final int mCalendarM2_ID = 2;
@@ -50,6 +51,10 @@ public class MyCalendarContent extends ScrollView {
 	private  int MAX_TAB_WIDTH;
 
 	private Context context;
+	
+	private int currentMaxMonth; // 当前最大月份
+	
+	private int mChildCount; // 复用控件数量
 	
 	public MyCalendarContent(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -74,7 +79,12 @@ public class MyCalendarContent extends ScrollView {
 	 * 刷新/注入数据,生成万年历
 	 */
 	public void notifyDataSetChanged() {
-		mCalendars = new ArrayList<MyCalendarLayout>();
+		
+		
+		// TODO 硬编码
+		mChildCount = 4;
+		
+		mCalendars = new CopyOnWriteArrayList<MyCalendarLayout>();
 		mainContent = new LinearLayout(context);
 		mainContent.setOrientation(LinearLayout.VERTICAL);
 		setVerticalScrollBarEnabled(false);// 不显示滚动条(垂直方向)
@@ -123,6 +133,7 @@ public class MyCalendarContent extends ScrollView {
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(TimeMills);
 		int month = c.get(Calendar.MONTH)+1;
+		currentMaxMonth= month;
 		for (int i = 0; i < list.size(); i++) {
 			Map<String, String> map = list.get(i);
 			int weekday = Integer.parseInt(map.get("week"));
@@ -206,18 +217,28 @@ public class MyCalendarContent extends ScrollView {
 	
 	
 	@Override
+	protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+		super.onScrollChanged(l, t, oldl, oldt);
+		int[] location = new int[2];
+		int i = 0;
+		while(i < mCalendars.size()) {
+			MyCalendarLayout m = mCalendars.get(i);
+			m.getLocationOnScreen(location);
+			if((location[1]+m.getHeight())<0) {
+				mCalendars.remove(i);
+				createMonth(m, System.currentTimeMillis(), currentMaxMonth+1);
+				mCalendars.add(m);
+			}
+			i++;
+		}
+	}
+	
+	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 		int widthMode = MeasureSpec.getMode(widthMeasureSpec);
 		boolean fillViewFlag = widthMode == MeasureSpec.EXACTLY;
 		setFillViewport(fillViewFlag);
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-	}
-	
-	@Override
-	protected void onScrollChanged(int l, int t, int oldl, int oldt) {
-		super.onScrollChanged(l, t, oldl, oldt);
-		
-		
 	}
 
 	/**

@@ -21,6 +21,5 @@ public class MyCalendarLayout extends LinearLayout {
 		super(context);
 		setOrientation(VERTICAL);
 	}
-
 	
 }
