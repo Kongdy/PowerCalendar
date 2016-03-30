@@ -7,6 +7,6 @@
     <com.example.powercalendar.MyCalendar 
         android:id="@+id/mCalendar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"></com.example.powercalendar.MyCalendar>
+        android:layout_height="wrap_content"></com.example.powercalendar.MyCalendar>
 
 </RelativeLayout>
