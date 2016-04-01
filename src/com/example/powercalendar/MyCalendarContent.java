@@ -20,6 +20,8 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -30,8 +32,10 @@ import android.widget.TextView;
  * @author wangk
  *
  */
-public class MyCalendarContent extends ViewGroup {
+public class MyCalendarContent extends FrameLayout {
 
+	private final static String TAG = "MyCalendarContent";
+	
 	private final static int MATHCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT;
 	private final static int WARP_CONTENT = ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -56,8 +60,7 @@ public class MyCalendarContent extends ViewGroup {
 
 	private int minSubStractMonth;// 最小月份相减
 	
-	private float TouchX;
-	private float TouchY;
+	private int lastMotionY; // 最新触摸y轴
 
 	public MyCalendarContent(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -69,11 +72,6 @@ public class MyCalendarContent extends ViewGroup {
 		super(context);
 		this.context = context;
 		notifyDataSetChanged();
-	}
-
-	@Override
-	protected void onDraw(Canvas canvas) {
-		super.onDraw(canvas);
 	}
 
 	/**
@@ -244,23 +242,46 @@ public class MyCalendarContent extends ViewGroup {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-
+		boolean touchflag = false;
+        int y = (int) event.getY();
 		switch (event.getAction()) {
-		case MotionEvent.ACTION_DOWN:
-			TouchX = event.getX();
-			TouchY = event.getY();
+		case MotionEvent.ACTION_DOWN: {
+			lastMotionY = y;
+//			lastMotionY = (int) event.getY();
+//			activePointId = event.getPointerId(0);
+//			touchflag = true;
+			//startNestedScroll(View.SCROLL_AXIS_VERTICAL);
+			break;
+		}
+		case MotionEvent.ACTION_MOVE:
+			int deltaY = y - lastMotionY;
+			super.scrollTo(0, -deltaY);
+			//offsetTopAndBottom(deltaY);
+			System.out.println("y change:"+deltaY);
+			invalidate();
+//			final int activePointerIndex = event.findPointerIndex(activePointId);
+//			if(activePointerIndex == -1) {
+//				Log.e(TAG, "Invalid pointId "+activePointId+" int touchEvent");
+//				return false;
+//			}
+//			
+//			if(touchflag){
+//				final int y = (int) event.getY(activePointerIndex);
+//				int deltaY = lastMotionY - y;
+//				final int range = getScrollRange();
+//				lastMotionY = y;
+//				layout(getLeft(), getTop()+deltaY, getRight(), getBottom()+deltaY);
+//				System.out.println("y change:"+deltaY);
+//			}
 			break;
 		case MotionEvent.ACTION_UP:
-
-			break;
-		case MotionEvent.ACTION_MOVE:
-
+			touchflag = false;
 			break;
 		default:
 			break;
 		}
 
-		return super.onTouchEvent(event);
+		return true;
 	}
 
 	@Override
@@ -319,13 +340,13 @@ public class MyCalendarContent extends ViewGroup {
 
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-		int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-		int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-
-		measureChildren(widthMeasureSpec, heightMeasureSpec);
-
-		setMeasuredDimension(widthSize, heightSize);
-		// super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//		int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+//		int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+//
+//		measureChildren(widthMeasureSpec, heightMeasureSpec);
+//
+//		setMeasuredDimension(widthSize, heightSize);
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 	}
 
 	/**
@@ -414,30 +435,5 @@ public class MyCalendarContent extends ViewGroup {
 			this.nativeInt = nativeInt;
 		}
 	}
-
-	@Override
-	protected void onLayout(boolean changed, int left, int top, int right,
-			int bottom) {
-		int mTotalHeight = 0;
-
-		// 遍历所有子视图
-		int childCount = getChildCount();
-		for (int i = 0; i < childCount; i++) {
-			View childView = getChildAt(i);
-
-			// 获取在onMeasure中计算的视图尺寸
-			int measureHeight = childView.getMeasuredHeight();
-			int measuredWidth = childView.getMeasuredWidth();
-
-			childView.layout(left, mTotalHeight, measuredWidth, mTotalHeight
-					+ measureHeight);
-
-			mTotalHeight += measureHeight;
-
-			Log.e("aaaaaaaaaaaaaa", "changed = " + changed + ", left = " + left
-					+ ", top = " + top + ", right = " + right + ", bottom = "
-					+ bottom + ", measureWidth = " + measuredWidth
-					+ ", measureHieght = " + measureHeight);
-		}
-	}
+	
 }
