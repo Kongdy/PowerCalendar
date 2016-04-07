@@ -61,6 +61,10 @@ public class MyCalendarContent extends FrameLayout {
 	private int minSubStractMonth;// 最小月份相减
 	
 	private int lastMotionY; // 最新触摸y轴
+	
+	private  int deltaY = 0;
+	// 已经改变的y轴数据
+	private int changeY = 0;
 
 	public MyCalendarContent(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -112,6 +116,7 @@ public class MyCalendarContent extends FrameLayout {
 			mainContent.addView(mCalendars.get(i), params);
 			i++;
 		}
+		mainContent.setBackgroundColor(Color.GREEN);
 		addView(mainContent);
 	}
 
@@ -239,50 +244,41 @@ public class MyCalendarContent extends FrameLayout {
 		c.set(Calendar.DATE, 1);
 		return c.get(Calendar.DAY_OF_WEEK);
 	}
-
+	
+	
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		boolean touchflag = false;
-        int y = (int) event.getY();
-		switch (event.getAction()) {
-		case MotionEvent.ACTION_DOWN: {
-			lastMotionY = y;
-//			lastMotionY = (int) event.getY();
-//			activePointId = event.getPointerId(0);
-//			touchflag = true;
-			//startNestedScroll(View.SCROLL_AXIS_VERTICAL);
-			break;
-		}
-		case MotionEvent.ACTION_MOVE:
-			int deltaY = y - lastMotionY;
-			super.scrollTo(0, -deltaY);
-			//offsetTopAndBottom(deltaY);
-			System.out.println("y change:"+deltaY);
-			invalidate();
-//			final int activePointerIndex = event.findPointerIndex(activePointId);
-//			if(activePointerIndex == -1) {
-//				Log.e(TAG, "Invalid pointId "+activePointId+" int touchEvent");
-//				return false;
-//			}
-//			
-//			if(touchflag){
-//				final int y = (int) event.getY(activePointerIndex);
-//				int deltaY = lastMotionY - y;
-//				final int range = getScrollRange();
-//				lastMotionY = y;
-//				layout(getLeft(), getTop()+deltaY, getRight(), getBottom()+deltaY);
-//				System.out.println("y change:"+deltaY);
-//			}
-			break;
-		case MotionEvent.ACTION_UP:
-			touchflag = false;
-			break;
-		default:
-			break;
-		}
-
+		  int y = (int) event.getY();
+			switch (event.getAction()) {
+			case MotionEvent.ACTION_DOWN: {
+				deltaY = y+changeY;
+				break;
+			}
+			case MotionEvent.ACTION_MOVE:
+				ViewParent parent = getParent();
+				if(parent != null) {
+					parent.requestDisallowInterceptTouchEvent(true);
+				}
+				lastMotionY = deltaY-y;
+				super.scrollTo(0, lastMotionY);
+				//offsetTopAndBottom(deltaY);
+				changeY = lastMotionY;
+				invalidate();
+//				mainContent.requestLayout();
+//				mainContent.invalidate();
+//				for (int i = 0; i < mainContent.getChildCount(); i++) {
+//					mainContent.getChildAt(i).invalidate();
+//				}
+				
+				break;
+			case MotionEvent.ACTION_UP:
+				break;
+			default:
+				break;
+			}
 		return true;
 	}
+
 
 	@Override
 	protected void onScrollChanged(int l, int t, int oldl, int oldt) {
