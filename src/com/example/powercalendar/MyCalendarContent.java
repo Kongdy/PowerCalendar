@@ -9,22 +9,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.example.powercalendar.tools.Utils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Canvas;
+import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.support.v4.view.ViewConfigurationCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.view.View.MeasureSpec;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.FrameLayout.LayoutParams;
 
 /**
  * 日历的主题可滑动部分
@@ -60,15 +64,30 @@ public class MyCalendarContent extends FrameLayout {
 
 	private int minSubStractMonth;// 最小月份相减
 	
-	private int lastMotionY; // 最新触摸y轴
+	private float lastMotionY; // 最新触摸y轴
+	// 开始滑动
+	private boolean isBeginDraged;
 	
-	private  int deltaY = 0;
-	// 已经改变的y轴数据
-	private int changeY = 0;
+	private int mTouchSlop; // 滑动最小距离阀值
+	
+	private int mActivePointId;
+	
+	private int totalWidth; // 总宽度
+	private int totalHeight; // 总高度
+	
+	private float scrollY; // 滑动y轴数据
+	private float scrollX; // 滑动x轴数据
+	
+	private boolean mFillViewPort; // 强制填充
+	
+	private int mOverscrollDistance;
 
 	public MyCalendarContent(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		this.context = context;
+		ViewConfiguration configuration = ViewConfiguration.get(context);
+		mTouchSlop = configuration.getScaledPagingTouchSlop();
+		mOverscrollDistance = configuration.getScaledOverscrollDistance();
 		notifyDataSetChanged();
 	}
 
@@ -77,17 +96,24 @@ public class MyCalendarContent extends FrameLayout {
 		this.context = context;
 		notifyDataSetChanged();
 	}
+	
 
 	/**
 	 * 刷新/注入数据,生成万年历
 	 */
 	public void notifyDataSetChanged() {
+		setWillNotDraw(false);
+		//setClipChildren(false);
+		final ViewConfiguration configuration = ViewConfiguration.get(context);
+		mOverscrollDistance = configuration.getScaledOverscrollDistance();
 		mCalendars = new CopyOnWriteArrayList<MyCalendarLayout>();
 		mainContent = new LinearLayout(context);
 		mainContent.setOrientation(LinearLayout.VERTICAL);
 		setVerticalScrollBarEnabled(false);// 不显示滚动条(垂直方向)
 		setBackgroundColor(Color.WHITE);
 		createRecycleMonth();
+		totalWidth = 0;
+		totalHeight = 0;
 	}
 
 	/**
@@ -117,7 +143,10 @@ public class MyCalendarContent extends FrameLayout {
 			i++;
 		}
 		mainContent.setBackgroundColor(Color.GREEN);
-		addView(mainContent);
+		android.view.ViewGroup.LayoutParams params2 = new android.view.ViewGroup.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 
+				FrameLayout.LayoutParams.WRAP_CONTENT);
+		params2.height = 5000;
+	//	addView(mainContent,params2);
 	}
 
 	/**
@@ -198,6 +227,21 @@ public class MyCalendarContent extends FrameLayout {
 			}
 		}
 	}
+	
+//	@Override
+//	public void draw(Canvas canvas) {
+//		super.draw(canvas);
+//		  final int restoreCount = canvas.save();
+//          final int width = getWidth() - getPaddingLeft() - getPaddingRight();
+//          final int height = getHeight();
+//
+//          canvas.translate(-width + getPaddingLeft(),
+//                  Math.max(getScrollRange(), getScrollY()) + height);
+//          System.out.println("getScrollRange():"+getScrollRange()+",getScrollY():"+getScrollY()+",height:"+height);
+//          canvas.rotate(180, width, 0);
+//          canvas.restoreToCount(restoreCount);
+//	}
+//	
 
 	/**
 	 * 通过时间戳获取某个月的带有星期的天数
@@ -245,25 +289,58 @@ public class MyCalendarContent extends FrameLayout {
 		return c.get(Calendar.DAY_OF_WEEK);
 	}
 	
-	
+	@SuppressLint("ClickableViewAccessibility")
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		  int y = (int) event.getY();
-			switch (event.getAction()) {
+		final int action = event.getAction();
+			switch (action & MotionEvent.ACTION_MASK) {
 			case MotionEvent.ACTION_DOWN: {
-				deltaY = y+changeY;
+				isBeginDraged = getChildCount() != 0;
+				if(!isBeginDraged) {
+					return false;
+				}
+				lastMotionY = event.getY();
+				mActivePointId = event.getPointerId(0);
 				break;
 			}
 			case MotionEvent.ACTION_MOVE:
-				ViewParent parent = getParent();
-				if(parent != null) {
-					parent.requestDisallowInterceptTouchEvent(true);
+				final int activePointerIndex = event.findPointerIndex(mActivePointId);
+				final float y = event.getY(activePointerIndex);
+				final int deltaY2 = (int) (lastMotionY-y);
+				
+				if(!isBeginDraged) {
+					if(Math.abs(deltaY2) > mTouchSlop) {
+						isBeginDraged = true;
+					}
 				}
-				lastMotionY = deltaY-y;
-				super.scrollTo(0, lastMotionY);
-				//offsetTopAndBottom(deltaY);
-				changeY = lastMotionY;
+				if(isBeginDraged) {
+				  final ViewParent parent = getParent();
+                    if (parent != null) {
+                        parent.requestDisallowInterceptTouchEvent(true);
+                    }
+					lastMotionY = y;
+					float oldScrollY = getScrollY();
+					scrollY = oldScrollY+deltaY2;
+					scrollX = getScrollX();
+					
+				overScrollBy(0, deltaY2, 0, (int) scrollY, 0, getScrollRangeY(), 0, mOverscrollDistance, true);
 				invalidate();
+				}
+				
+				
+				//deltaY-y;
+			//	((View)parent).invalidate();
+			//	overScrollBy(0, lastMotionY, 0, getScrollY(), 0, getScrollRange(), 0, mOverscrollDistance, true);
+		//		super.scrollTo(0, lastMotionY);
+				//offsetTopAndBottom(deltaY);
+			//	changeY = lastMotionY;
+//				invalidate();
+//				requestLayout();
+//				computeScroll();
+//				int[] location = new int[2];
+//				Rect rect = new Rect();
+//				invalidateChildInParent(location, rect);
+//				computeVerticalScrollOffset();
 //				mainContent.requestLayout();
 //				mainContent.invalidate();
 //				for (int i = 0; i < mainContent.getChildCount(); i++) {
@@ -277,6 +354,14 @@ public class MyCalendarContent extends FrameLayout {
 				break;
 			}
 		return true;
+	}
+	
+	@Override
+	protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX,
+			boolean clampedY) {
+	//	super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
+		super.scrollTo(scrollX, scrollY);
+		System.out.println("scrollX:"+scrollX+",scrollY:"+scrollY);
 	}
 
 
@@ -333,18 +418,177 @@ public class MyCalendarContent extends FrameLayout {
 		}
 		mSCROLL_STATU = SCROLL_STATE.STATE_STATIC.nativeInt;
 	}
+	
+	/**
+	 * 适配控件
+	 */
+//	@Override
+//	protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
+//		int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+//		int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+//		
+//		/**
+//		 * EXACTLY代表精确尺寸，即match_parent或者给定尺寸
+//		 * AT_MOST代表最大尺寸，即warp_content
+//		 */
+//		
+//		if(heightMode == MeasureSpec.AT_MOST ) {
+//			if(getChildCount() > 0) {
+//				totalHeight = 0;
+//				for (int i = 0;i < getChildCount();i++) {
+//					totalHeight += getChildAt(i).getMeasuredHeight();
+//					System.out.println("add "+i);
+//				}
+//			}
+//		}
+//		if(getChildCount() >0 ) {
+//			totalWidth = 0;
+//			for (int i = 0; i < getChildCount(); i++) {
+//				totalWidth += getChildAt(i).getMeasuredWidth();
+//			}
+//		}
+//		System.out.println("totalHeight:"+totalHeight+",totalWidth:"+totalWidth+",getHeight():"+getMeasuredHeight());
+//		super.measureChildren(widthMeasureSpec, totalHeight);
+//	}
+	
+	   @Override
+	    protected void measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec) {
+	        ViewGroup.LayoutParams lp = child.getLayoutParams();
 
+	        int childWidthMeasureSpec;
+	        int childHeightMeasureSpec;
+
+	        childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec, getPaddingLeft()
+	                + getPaddingRight(), lp.width);
+
+	        childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+	        totalHeight = MeasureSpec.getSize(childHeightMeasureSpec);
+	        System.out.println("totalHeight:"+totalHeight);
+	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+	    }
+	
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-//		int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-//		int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-//
-//		measureChildren(widthMeasureSpec, heightMeasureSpec);
-//
-//		setMeasuredDimension(widthSize, heightSize);
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-	}
+		
+		if(!mFillViewPort) {
+			return;
+		}
+		// fillviewPort
+		 final int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+	        if (heightMode == MeasureSpec.UNSPECIFIED) {
+	            return;
+	        }
 
+	        if (getChildCount() > 0) {
+	            final View child = getChildAt(0);
+	            int height = getMeasuredHeight();
+	            if (child.getMeasuredHeight() < height) {
+	            	 System.out.println("child.getMeasuredHeight():"+child.getMeasuredHeight()+"height:"+height);
+	                final FrameLayout.LayoutParams lp = (LayoutParams) child.getLayoutParams();
+
+	                int childWidthMeasureSpec = getChildMeasureSpec(widthMeasureSpec,
+	                        getPaddingLeft() + getPaddingRight(), lp.width);
+	                height -= getPaddingTop();
+	                height -= getPaddingBottom();
+	                int childHeightMeasureSpec =
+	                        MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+
+	                child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+	            }
+	        }
+	}
+	
+	@Override
+	protected void onLayout(boolean changed, int left, int top, int right,
+			int bottom) {
+		super.onLayout(changed, left, top, right, bottom);
+		// 滑动
+		final int topRange = 0;
+		final int bottomRange = getScrollRangeY();
+		if(scrollY > bottomRange) {
+			scrollY = bottomRange;
+			System.out.println("it's bottom");
+		} else if(scrollY < topRange) {
+			scrollY = topRange;
+			System.out.println("it's top");
+		}
+		scrollTo((int) scrollX, (int) scrollY);
+	}
+	
+	/**
+	 * 设置是否强制填充
+	 * @param flag
+	 */
+	public void setFillViewPort(boolean flag) {
+		if(this.mFillViewPort != flag) {
+			this.mFillViewPort = flag;
+			requestLayout();
+		}
+	}
+	
+	/**
+	 * 是否强制填充
+	 * @return
+	 */
+	public boolean isFillViewPort() {
+		return mFillViewPort;
+	}
+	
+	   @Override
+    public void addView(View child) {
+        if (getChildCount() > 0) {
+            throw new IllegalStateException("ScrollView can host only one direct child");
+        }
+
+        super.addView(child);
+    }
+
+    @Override
+    public void addView(View child, int index) {
+        if (getChildCount() > 0) {
+            throw new IllegalStateException("ScrollView can host only one direct child");
+        }
+
+        super.addView(child, index);
+    }
+
+    @Override
+    public void addView(View child, ViewGroup.LayoutParams params) {
+        if (getChildCount() > 0) {
+            throw new IllegalStateException("ScrollView can host only one direct child");
+        }
+
+        super.addView(child, params);
+    }
+
+    @Override
+    public void addView(View child, int index, ViewGroup.LayoutParams params) {
+        if (getChildCount() > 0) {
+            throw new IllegalStateException("ScrollView can host only one direct child");
+        }
+
+        super.addView(child, index, params);
+    }
+    
+    /**
+     * 返回子控件的bottom减去父控件的大小，即判断是否到最底部
+     * @return
+     */
+    private int getScrollRangeY() {
+        int scrollRange = 0;
+        if (getChildCount() > 0) {
+            View child = getChildAt(0);
+            scrollRange = Math.max(0,
+                    child.getHeight() - (getHeight() - getPaddingBottom() - getPaddingTop()));
+            System.out.println(" child.getHeight():"+ child.getHeight());
+        }
+        return scrollRange;
+    }
+
+	    
+	    
+	 /******************   内部类/枚举   *********/
 	/**
 	 * 每行日期
 	 * 
@@ -371,10 +615,62 @@ public class MyCalendarContent extends FrameLayout {
 							(int) TypedValue.COMPLEX_UNIT_DIP, 15));
 		}
 
+//	    @Override
+//	    protected void measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec) {
+//	        ViewGroup.LayoutParams lp = child.getLayoutParams();
+//
+//	        int childWidthMeasureSpec;
+//	        int childHeightMeasureSpec;
+//
+//	        childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec, getPaddingLeft()
+//	                + getPaddingRight(), lp.width);
+//
+//	        childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+//
+//	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+//	    }
+//	    
+//	    @Override
+//	    protected void measureChildWithMargins(View child, int parentWidthMeasureSpec, int widthUsed,
+//	            int parentHeightMeasureSpec, int heightUsed) {
+//	        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
+//
+//	        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
+//	                getPaddingLeft() + getPaddingRight() + lp.leftMargin + lp.rightMargin
+//	                        + widthUsed, lp.width);
+//	        final int childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(
+//	                lp.topMargin + lp.bottomMargin, MeasureSpec.UNSPECIFIED);
+//
+//	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+//	    }
+//		
 		@Override
 		protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-			MAX_TAB_WIDTH = MeasureSpec.getSize(widthMeasureSpec) / 7;
 			super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+			MAX_TAB_WIDTH = MeasureSpec.getSize(widthMeasureSpec) / 7;
+			
+//			final int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+//	        if (heightMode == MeasureSpec.UNSPECIFIED) {
+//	            return;
+//	        }
+//			if (getChildCount() > 0) {
+//	            final View child = getChildAt(0);
+//	            int height = getMeasuredHeight();
+//	            if (child.getMeasuredHeight() < height) {
+//	                final LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) child.getLayoutParams();
+//	                
+//	                int childWidthMeasureSpec = getChildMeasureSpec(widthMeasureSpec,
+//	                        getPaddingLeft() + getPaddingRight(), lp.width);
+//	                height -= getPaddingTop();
+//	                height -= getPaddingBottom();
+//	                int childHeightMeasureSpec =
+//	                        MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+//
+//	                child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+//	            }
+//	        }
+//			System.out.println("mainContent height:"+mainContent.getHeight());
+	//		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 		}
 
 	}
@@ -432,4 +728,7 @@ public class MyCalendarContent extends FrameLayout {
 		}
 	}
 	
+	
+
+	    
 }
