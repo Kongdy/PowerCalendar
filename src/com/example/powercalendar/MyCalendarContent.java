@@ -24,6 +24,7 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.View.MeasureSpec;
+import android.view.ViewGroup.MarginLayoutParams;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -146,12 +147,11 @@ public class MyCalendarContent extends FrameLayout {
 		android.view.ViewGroup.LayoutParams params2 = new android.view.ViewGroup.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 
 				FrameLayout.LayoutParams.WRAP_CONTENT);
 		params2.height = 5000;
-	//	addView(mainContent,params2);
+		addView(mainContent,params2);
 	}
 
 	/**
 	 * 给月份填充数据
-	 * 
 	 * @param mCalendarM
 	 * @param list
 	 * @param timeMills
@@ -227,25 +227,9 @@ public class MyCalendarContent extends FrameLayout {
 			}
 		}
 	}
-	
-//	@Override
-//	public void draw(Canvas canvas) {
-//		super.draw(canvas);
-//		  final int restoreCount = canvas.save();
-//          final int width = getWidth() - getPaddingLeft() - getPaddingRight();
-//          final int height = getHeight();
-//
-//          canvas.translate(-width + getPaddingLeft(),
-//                  Math.max(getScrollRange(), getScrollY()) + height);
-//          System.out.println("getScrollRange():"+getScrollRange()+",getScrollY():"+getScrollY()+",height:"+height);
-//          canvas.rotate(180, width, 0);
-//          canvas.restoreToCount(restoreCount);
-//	}
-//	
 
 	/**
 	 * 通过时间戳获取某个月的带有星期的天数
-	 * 
 	 * @param TimeMills
 	 *            时间毫秒
 	 * @param changeMonth
@@ -289,6 +273,9 @@ public class MyCalendarContent extends FrameLayout {
 		return c.get(Calendar.DAY_OF_WEEK);
 	}
 	
+	/**
+	 * 滑动关键
+	 */
 	@SuppressLint("ClickableViewAccessibility")
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
@@ -326,27 +313,27 @@ public class MyCalendarContent extends FrameLayout {
 				overScrollBy(0, deltaY2, 0, (int) scrollY, 0, getScrollRangeY(), 0, mOverscrollDistance, true);
 				invalidate();
 				}
-				
-				
-				//deltaY-y;
-			//	((View)parent).invalidate();
-			//	overScrollBy(0, lastMotionY, 0, getScrollY(), 0, getScrollRange(), 0, mOverscrollDistance, true);
-		//		super.scrollTo(0, lastMotionY);
-				//offsetTopAndBottom(deltaY);
-			//	changeY = lastMotionY;
-//				invalidate();
-//				requestLayout();
-//				computeScroll();
-//				int[] location = new int[2];
-//				Rect rect = new Rect();
-//				invalidateChildInParent(location, rect);
-//				computeVerticalScrollOffset();
-//				mainContent.requestLayout();
-//				mainContent.invalidate();
-//				for (int i = 0; i < mainContent.getChildCount(); i++) {
-//					mainContent.getChildAt(i).invalidate();
-//				}
-				
+		/*		
+		 *      预留
+		 *		 deltaY-y;
+				((View)parent).invalidate();
+				overScrollBy(0, lastMotionY, 0, getScrollY(), 0, getScrollRange(), 0, mOverscrollDistance, true);
+				super.scrollTo(0, lastMotionY);
+				offsetTopAndBottom(deltaY);
+				changeY = lastMotionY;
+				invalidate();
+				requestLayout();
+				computeScroll();
+				int[] location = new int[2];
+				Rect rect = new Rect();
+				invalidateChildInParent(location, rect);
+				computeVerticalScrollOffset();
+				mainContent.requestLayout();
+				mainContent.invalidate();
+				for (int i = 0; i < mainContent.getChildCount(); i++) {
+					mainContent.getChildAt(i).invalidate();
+				}
+				*/
 				break;
 			case MotionEvent.ACTION_UP:
 				break;
@@ -361,7 +348,6 @@ public class MyCalendarContent extends FrameLayout {
 			boolean clampedY) {
 	//	super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
 		super.scrollTo(scrollX, scrollY);
-		System.out.println("scrollX:"+scrollX+",scrollY:"+scrollY);
 	}
 
 
@@ -373,12 +359,11 @@ public class MyCalendarContent extends FrameLayout {
 		} else {
 			mSCROLL_STATU = SCROLL_STATE.STATE_SCROLLED_DONW.nativeInt;
 		}
-
+		refreshView();
 	}
 
 	// TODO
 	private void refreshView() {
-
 		int[] location = new int[2];
 		int[] location2 = new int[2];
 		int i = mCalendars.size() - 1;
@@ -419,37 +404,6 @@ public class MyCalendarContent extends FrameLayout {
 		mSCROLL_STATU = SCROLL_STATE.STATE_STATIC.nativeInt;
 	}
 	
-	/**
-	 * 适配控件
-	 */
-//	@Override
-//	protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
-//		int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-//		int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-//		
-//		/**
-//		 * EXACTLY代表精确尺寸，即match_parent或者给定尺寸
-//		 * AT_MOST代表最大尺寸，即warp_content
-//		 */
-//		
-//		if(heightMode == MeasureSpec.AT_MOST ) {
-//			if(getChildCount() > 0) {
-//				totalHeight = 0;
-//				for (int i = 0;i < getChildCount();i++) {
-//					totalHeight += getChildAt(i).getMeasuredHeight();
-//					System.out.println("add "+i);
-//				}
-//			}
-//		}
-//		if(getChildCount() >0 ) {
-//			totalWidth = 0;
-//			for (int i = 0; i < getChildCount(); i++) {
-//				totalWidth += getChildAt(i).getMeasuredWidth();
-//			}
-//		}
-//		System.out.println("totalHeight:"+totalHeight+",totalWidth:"+totalWidth+",getHeight():"+getMeasuredHeight());
-//		super.measureChildren(widthMeasureSpec, totalHeight);
-//	}
 	
 	   @Override
 	    protected void measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec) {
@@ -462,8 +416,24 @@ public class MyCalendarContent extends FrameLayout {
 	                + getPaddingRight(), lp.width);
 
 	        childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+	        
+	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+	    }
+	   
+	   /**
+	    * 关键性作用，重写这里，来达到对子控件的适应
+	    */
+	   @Override
+	    protected void measureChildWithMargins(View child, int parentWidthMeasureSpec, int widthUsed,
+	            int parentHeightMeasureSpec, int heightUsed) {
+	        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
+
+	        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
+	        		getPaddingLeft() + getPaddingRight() + lp.leftMargin + lp.rightMargin
+	                        + widthUsed, lp.width);
+	        final int childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(
+	                lp.topMargin + lp.bottomMargin, MeasureSpec.UNSPECIFIED);
 	        totalHeight = MeasureSpec.getSize(childHeightMeasureSpec);
-	        System.out.println("totalHeight:"+totalHeight);
 	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
 	    }
 	
@@ -498,6 +468,7 @@ public class MyCalendarContent extends FrameLayout {
 	            }
 	        }
 	}
+	
 	
 	@Override
 	protected void onLayout(boolean changed, int left, int top, int right,
