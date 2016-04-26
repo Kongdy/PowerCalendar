@@ -143,12 +143,12 @@ public class MyCalendarContent extends FrameLayout {
 			mainContent.addView(mCalendars.get(i), params);
 			i++;
 		}
-		mainContent.setBackgroundColor(Color.GREEN);
 		android.view.ViewGroup.LayoutParams params2 = new android.view.ViewGroup.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 
 				FrameLayout.LayoutParams.WRAP_CONTENT);
 		params2.height = 5000;
 		addView(mainContent,params2);
 	}
+	
 
 	/**
 	 * 给月份填充数据
@@ -383,6 +383,7 @@ public class MyCalendarContent extends FrameLayout {
 				params.addRule(RelativeLayout.BELOW, id);
 				createMonth(newM, System.currentTimeMillis(),
 						currentChangeMonth + 1);
+				newM.setEnabled(false);
 				mainContent.addView(newM, params);
 				mCalendars.add(newM);
 				System.out.println("add foot");
