@@ -13,6 +13,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.support.v4.view.ViewConfigurationCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
@@ -29,6 +30,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.FrameLayout.LayoutParams;
 
 /**
@@ -82,7 +84,7 @@ public class MyCalendarContent extends FrameLayout {
 	private boolean mFillViewPort; // 强制填充
 	
 	private int mOverscrollDistance;
-
+	
 	public MyCalendarContent(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		this.context = context;
@@ -145,7 +147,6 @@ public class MyCalendarContent extends FrameLayout {
 		}
 		android.view.ViewGroup.LayoutParams params2 = new android.view.ViewGroup.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 
 				FrameLayout.LayoutParams.WRAP_CONTENT);
-		params2.height = 5000;
 		addView(mainContent,params2);
 	}
 	
@@ -156,11 +157,12 @@ public class MyCalendarContent extends FrameLayout {
 	 * @param list
 	 * @param timeMills
 	 */
-	private void fillData(MyCalendarLayout mCalendarM,
+	private void fillData(final MyCalendarLayout mCalendarM,
 			List<Map<String, String>> list, long TimeMills, int changeMonth) {
 		MyCalendarWeek mCalendarW = new MyCalendarWeek(context); // 每行
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(TimeMills);
+		int row = 0;
 		int month = c.get(Calendar.MONTH) + 1;
 
 		if (minSubStractMonth > changeMonth) {
@@ -189,6 +191,7 @@ public class MyCalendarContent extends FrameLayout {
 					mCalendarW.addView(mCalendarYear);
 					mCalendarM.addView(mCalendarW);
 					mCalendarW = new MyCalendarWeek(context);
+					row++;
 				}
 				for (int j = 0; j < count; j++) {
 					MyCalendarDay mCalendarD = new MyCalendarDay(context);
@@ -204,6 +207,7 @@ public class MyCalendarContent extends FrameLayout {
 				mCalendarW.addView(mCalendarTitle);
 				mCalendarM.addView(mCalendarW);
 				mCalendarW = new MyCalendarWeek(context);
+				row++;
 				if (weekday != 1) {
 					for (int j = 0; j < count; j++) {
 						MyCalendarDay mCalendarD = new MyCalendarDay(context);
@@ -217,6 +221,30 @@ public class MyCalendarContent extends FrameLayout {
 				mCalendarD.setTextColor(getResources().getColor(
 						R.color.title_weekend));
 			}
+			final int index = row;
+			final int postion = i;
+			mCalendarD.setOnClickListener(new OnClickListener() {
+				
+				@Override
+				public void onClick(View v) {
+					if(postion != -1 && mCalendarM.getPreRow() != -1) {
+						mCalendarM.removeViewAt(mCalendarM.getPreRow());
+					}
+					if(postion != mCalendarM.getPostion()) {
+						mCalendarM.setPostion(postion);
+						MyCalendarWeek mCalendarData = new MyCalendarWeek(context);
+						mCalendarData.setBackgroundColor(Color.RED);
+						LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATHCH_PARENT,
+								WARP_CONTENT);
+						params.height = 200;
+						mCalendarM.addView(mCalendarData,index+1, params);
+						mCalendarM.setPreRow(index+1);
+					} else {
+						mCalendarM.setPreRow(-1);
+						mCalendarM.setPostion(-1);
+					}
+				}
+			});
 			mCalendarD.setText(map.get("day"));
 			mCalendarD.setTextSize(Utils.getRawSize(context,
 					TypedValue.COMPLEX_UNIT_SP, 7));
@@ -224,6 +252,7 @@ public class MyCalendarContent extends FrameLayout {
 			if (weekday % 7 == 0 || i >= list.size() - 1) {
 				mCalendarM.addView(mCalendarW);
 				mCalendarW = new MyCalendarWeek(context);
+				row++;
 			}
 		}
 	}
@@ -309,7 +338,7 @@ public class MyCalendarContent extends FrameLayout {
 					float oldScrollY = getScrollY();
 					scrollY = oldScrollY+deltaY2;
 					scrollX = getScrollX();
-					
+				
 				overScrollBy(0, deltaY2, 0, (int) scrollY, 0, getScrollRangeY(), 0, mOverscrollDistance, true);
 				invalidate();
 				}
@@ -336,6 +365,7 @@ public class MyCalendarContent extends FrameLayout {
 				*/
 				break;
 			case MotionEvent.ACTION_UP:
+				isBeginDraged = false;
 				break;
 			default:
 				break;
@@ -349,7 +379,7 @@ public class MyCalendarContent extends FrameLayout {
 	//	super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
 		super.scrollTo(scrollX, scrollY);
 	}
-
+	
 
 	@Override
 	protected void onScrollChanged(int l, int t, int oldl, int oldt) {
@@ -359,9 +389,11 @@ public class MyCalendarContent extends FrameLayout {
 		} else {
 			mSCROLL_STATU = SCROLL_STATE.STATE_SCROLLED_DONW.nativeInt;
 		}
-		refreshView();
+		if(isBeginDraged) {
+			refreshView();
+		}
 	}
-
+	
 	// TODO
 	private void refreshView() {
 		int[] location = new int[2];
@@ -373,6 +405,9 @@ public class MyCalendarContent extends FrameLayout {
 		firstM.getLocationOnScreen(location2);
 		RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
 				MATHCH_PARENT, WARP_CONTENT);
+		
+		// 如果是向下滚动的状态，即手指向上滑动，并且如果第一个控件的Y值+第一个空间的高度小于0，即在屏幕之外，
+		//底部控件的顶部Y值小于屏幕高度,即可以看到底部控件的时候，则底部增加控件
 		if (mSCROLL_STATU == SCROLL_STATE.STATE_SCROLLED_UP.nativeInt) {
 			MyCalendarLayout m = mCalendars.get(i);
 			m.getLocationOnScreen(location);
@@ -383,28 +418,31 @@ public class MyCalendarContent extends FrameLayout {
 				params.addRule(RelativeLayout.BELOW, id);
 				createMonth(newM, System.currentTimeMillis(),
 						currentChangeMonth + 1);
-				newM.setEnabled(false);
+				newM.setEnabled(false);	
 				mainContent.addView(newM, params);
 				mCalendars.add(newM);
 				System.out.println("add foot");
 			}
+			// 如果是向上滚动状态，即手指向下，并且底部控件的Y值在屏幕之外，顶部控件的Y值加上他的高度
+			// 大于0，即可以看到上面的第一个控件的时候，顶部增加一个控件
 		} else if (mSCROLL_STATU == SCROLL_STATE.STATE_SCROLLED_DONW.nativeInt) {
 			if (location[1] > getHeight()
 					&& location2[1] + firstM.getHeight() > 0) {
-				// System.out.println("getHeight():"+getHeight()+"location[1]:"+location[1]+",i==="+i);
 				int id = mCalendars.get(0).getId();
 				params.addRule(RelativeLayout.ABOVE, id);
 				MyCalendarLayout newM = new MyCalendarLayout(getContext());
 				createMonth(newM, System.currentTimeMillis(),
 						minSubStractMonth - 1);
-				mainContent.addView(newM, 0, params);
+				mainContent.addView(newM, 0,params);
+				// 向上滑动，顶部增加控件，但不把向下滚动的关键
+				int aa = (int) (scrollY+mainContent.getMeasuredHeight()/mainContent.getChildCount());
+				super.scrollTo(0, aa);
 				mCalendars.add(0, newM);
 				System.out.println("add head");
 			}
 		}
 		mSCROLL_STATU = SCROLL_STATE.STATE_STATIC.nativeInt;
 	}
-	
 	
 	   @Override
 	    protected void measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec) {
@@ -470,22 +508,24 @@ public class MyCalendarContent extends FrameLayout {
 	        }
 	}
 	
-	
 	@Override
 	protected void onLayout(boolean changed, int left, int top, int right,
 			int bottom) {
-		super.onLayout(changed, left, top, right, bottom);
-		// 滑动
-		final int topRange = 0;
-		final int bottomRange = getScrollRangeY();
-		if(scrollY > bottomRange) {
-			scrollY = bottomRange;
-			System.out.println("it's bottom");
-		} else if(scrollY < topRange) {
-			scrollY = topRange;
-			System.out.println("it's top");
+	//	super.onLayout(changed, left, top, right, bottom);
+		for (int i = 0; i < getChildCount(); i++) {
+			final View child = getChildAt(i);
+			if(child.getVisibility() != GONE) {
+				final LayoutParams params = (LayoutParams) child.getLayoutParams();
+				
+				final int width = child.getMeasuredWidth();
+				final int height = child.getMeasuredHeight();
+				
+				int childleft = 0;
+				int childtop = getPaddingTop()+params.topMargin;
+				
+				child.layout(childleft, childtop, childleft+width, childtop+height);
+			}
 		}
-		scrollTo((int) scrollX, (int) scrollY);
 	}
 	
 	/**
@@ -568,7 +608,7 @@ public class MyCalendarContent extends FrameLayout {
 	 *
 	 */
 	public class MyCalendarWeek extends LinearLayout {
-
+		
 		public MyCalendarWeek(Context context, AttributeSet attrs) {
 			super(context, attrs);
 			init();
@@ -587,62 +627,10 @@ public class MyCalendarContent extends FrameLayout {
 							(int) TypedValue.COMPLEX_UNIT_DIP, 15));
 		}
 
-//	    @Override
-//	    protected void measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec) {
-//	        ViewGroup.LayoutParams lp = child.getLayoutParams();
-//
-//	        int childWidthMeasureSpec;
-//	        int childHeightMeasureSpec;
-//
-//	        childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec, getPaddingLeft()
-//	                + getPaddingRight(), lp.width);
-//
-//	        childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-//
-//	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
-//	    }
-//	    
-//	    @Override
-//	    protected void measureChildWithMargins(View child, int parentWidthMeasureSpec, int widthUsed,
-//	            int parentHeightMeasureSpec, int heightUsed) {
-//	        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
-//
-//	        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
-//	                getPaddingLeft() + getPaddingRight() + lp.leftMargin + lp.rightMargin
-//	                        + widthUsed, lp.width);
-//	        final int childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(
-//	                lp.topMargin + lp.bottomMargin, MeasureSpec.UNSPECIFIED);
-//
-//	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
-//	    }
-//		
 		@Override
 		protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 			super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 			MAX_TAB_WIDTH = MeasureSpec.getSize(widthMeasureSpec) / 7;
-			
-//			final int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-//	        if (heightMode == MeasureSpec.UNSPECIFIED) {
-//	            return;
-//	        }
-//			if (getChildCount() > 0) {
-//	            final View child = getChildAt(0);
-//	            int height = getMeasuredHeight();
-//	            if (child.getMeasuredHeight() < height) {
-//	                final LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) child.getLayoutParams();
-//	                
-//	                int childWidthMeasureSpec = getChildMeasureSpec(widthMeasureSpec,
-//	                        getPaddingLeft() + getPaddingRight(), lp.width);
-//	                height -= getPaddingTop();
-//	                height -= getPaddingBottom();
-//	                int childHeightMeasureSpec =
-//	                        MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
-//
-//	                child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
-//	            }
-//	        }
-//			System.out.println("mainContent height:"+mainContent.getHeight());
-	//		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 		}
 
 	}
@@ -653,7 +641,7 @@ public class MyCalendarContent extends FrameLayout {
 	 * @author wangk
 	 */
 	public class MyCalendarDay extends TextView {
-
+		
 		public MyCalendarDay(Context context, AttributeSet attrs) {
 			super(context, attrs);
 			setGravity(Gravity.CENTER);
@@ -666,11 +654,10 @@ public class MyCalendarContent extends FrameLayout {
 
 		@Override
 		protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-
 			super.onMeasure(MeasureSpec.makeMeasureSpec(MAX_TAB_WIDTH,
 					MeasureSpec.EXACTLY), heightMeasureSpec);
 		}
-
+		
 	}
 
 	/**

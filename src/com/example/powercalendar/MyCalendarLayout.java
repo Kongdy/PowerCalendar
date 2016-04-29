@@ -10,6 +10,10 @@ import android.widget.LinearLayout;
  * @author wangk
  */
 public class MyCalendarLayout extends LinearLayout {
+	
+	private int postion = -1;
+	
+	private int preRow = -1;
 
 	public MyCalendarLayout(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -20,6 +24,25 @@ public class MyCalendarLayout extends LinearLayout {
 	public MyCalendarLayout(Context context) {
 		super(context);
 		setOrientation(VERTICAL);
+	}
+
+	public int getPostion() {
+		return postion;
+	}
+
+
+	public void setPostion(int postion) {
+		this.postion = postion;
+	}
+
+
+	public int getPreRow() {
+		return preRow;
+	}
+
+
+	public void setPreRow(int preRow) {
+		this.preRow = preRow;
 	}
 	
 }
