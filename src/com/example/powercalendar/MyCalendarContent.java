@@ -26,6 +26,10 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup.MarginLayoutParams;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.Animation.AnimationListener;
+import android.view.animation.ScaleAnimation;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -106,7 +110,7 @@ public class MyCalendarContent extends FrameLayout {
 	 */
 	public void notifyDataSetChanged() {
 		setWillNotDraw(false);
-		//setClipChildren(false);
+		setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
 		final ViewConfiguration configuration = ViewConfiguration.get(context);
 		mOverscrollDistance = configuration.getScaledOverscrollDistance();
 		mCalendars = new CopyOnWriteArrayList<MyCalendarLayout>();
@@ -232,9 +236,9 @@ public class MyCalendarContent extends FrameLayout {
 					}
 					if(postion != mCalendarM.getPostion()) {
 						mCalendarM.setPostion(postion);
-						MyCalendarWeek mCalendarData = new MyCalendarWeek(context);
+						final MyCalendarWeek mCalendarData = new MyCalendarWeek(context);
 						mCalendarData.setBackgroundColor(Color.RED);
-						LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATHCH_PARENT,
+						final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATHCH_PARENT,
 								WARP_CONTENT);
 						params.height = 200;
 						mCalendarM.addView(mCalendarData,index+1, params);
@@ -620,6 +624,7 @@ public class MyCalendarContent extends FrameLayout {
 		}
 
 		private void init() {
+			setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
 			setOrientation(LinearLayout.HORIZONTAL);
 			setPadding(0, (int) Utils.getRawSize(context,
 					TypedValue.COMPLEX_UNIT_DIP, 15), 0,
@@ -637,10 +642,12 @@ public class MyCalendarContent extends FrameLayout {
 
 	/**
 	 * 每天日期
-	 * 
 	 * @author wangk
 	 */
 	public class MyCalendarDay extends TextView {
+		
+		// 是否可被点击
+		private boolean canClick;
 		
 		public MyCalendarDay(Context context, AttributeSet attrs) {
 			super(context, attrs);
@@ -657,7 +664,14 @@ public class MyCalendarContent extends FrameLayout {
 			super.onMeasure(MeasureSpec.makeMeasureSpec(MAX_TAB_WIDTH,
 					MeasureSpec.EXACTLY), heightMeasureSpec);
 		}
-		
+
+		public boolean isCanClick() {
+			return canClick;
+		}
+
+		public void setCanClick(boolean canClick) {
+			this.canClick = canClick;
+		}
 	}
 
 	/**

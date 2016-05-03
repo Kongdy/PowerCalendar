@@ -6,6 +6,7 @@
 
     <com.example.powercalendar.MyCalendar
         android:id="@+id/mCalendar"
+        android:animateLayoutChanges="true"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
     </com.example.powercalendar.MyCalendar>
