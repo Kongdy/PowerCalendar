@@ -334,10 +334,6 @@ public class MyCalendarContent extends FrameLayout {
 					}
 				}
 				if(isBeginDraged) {
-				  final ViewParent parent = getParent();
-                    if (parent != null) {
-                        parent.requestDisallowInterceptTouchEvent(true);
-                    }
 					lastMotionY = y;
 					float oldScrollY = getScrollY();
 					scrollY = oldScrollY+deltaY2;
@@ -441,7 +437,7 @@ public class MyCalendarContent extends FrameLayout {
 				// 向上滑动，顶部增加控件，但不把向下滚动的关键
 				int aa = (int) (scrollY+mainContent.getMeasuredHeight()/mainContent.getChildCount());
 				super.scrollTo(0, aa);
-				mCalendars.add(0, newM);
+				mCalendars.add(0, newM); 
 				System.out.println("add head");
 			}
 		}
