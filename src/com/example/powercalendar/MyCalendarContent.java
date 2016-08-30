@@ -593,7 +593,6 @@ public class MyCalendarContent extends FrameLayout {
             View child = getChildAt(0);
             scrollRange = Math.max(0,
                     child.getHeight() - (getHeight() - getPaddingBottom() - getPaddingTop()));
-            System.out.println(" child.getHeight():"+ child.getHeight());
         }
         return scrollRange;
     }
